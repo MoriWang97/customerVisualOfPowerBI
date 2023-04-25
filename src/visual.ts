@@ -33,6 +33,8 @@ import IVisual = powerbi.extensibility.visual.IVisual;
 import DataView = powerbi.DataView;
 import IVisualHost = powerbi.extensibility.IVisualHost;
 import * as d3 from "d3";
+import { VisualSettings } from "./settings";
+import { FormattingSettingsService } from "powerbi-visuals-utils-formattingmodel";
 type Selection<T extends d3.BaseType> = d3.Selection<T, any, any, any>;
 
 export class Visual implements IVisual {
@@ -42,6 +44,8 @@ export class Visual implements IVisual {
     private circle: Selection<SVGElement>;
     private textValue: Selection<SVGElement>;
     private textLabel: Selection<SVGElement>;
+    private visualSettings: VisualSettings;
+    private formattingSettingsService: FormattingSettingsService;
     
     constructor(options: VisualConstructorOptions) {
         this.svg = d3.select(options.element)
@@ -55,6 +59,7 @@ export class Visual implements IVisual {
             .classed("textValue", true);
         this.textLabel = this.container.append("text")
             .classed("textLabel", true);
+        this.formattingSettingsService = new FormattingSettingsService();
     }
     
     public update(options: VisualUpdateOptions) {
@@ -64,11 +69,14 @@ export class Visual implements IVisual {
         this.svg.attr("width", width);
         this.svg.attr("height", height);
         let radius: number = Math.min(width, height) / 2.2;
+        this.visualSettings = this.formattingSettingsService.populateFormattingSettingsModel(VisualSettings, options.dataViews);
+        this.visualSettings.circle.circleThickness.value = Math.max(0, this.visualSettings.circle.circleThickness.value);
+        this.visualSettings.circle.circleThickness.value = Math.min(10, this.visualSettings.circle.circleThickness.value);
         this.circle
-            .style("fill", "white")
+            .style("fill", this.visualSettings.circle.circleColor.value.value)
             .style("fill-opacity", 0.5)
             .style("stroke", "black")
-            .style("stroke-width", 2)
+            .style("stroke-width", this.visualSettings.circle.circleThickness.value)
             .attr("r", radius)
             .attr("cx", width / 2)
             .attr("cy", height / 2);
@@ -88,5 +96,9 @@ export class Visual implements IVisual {
             .attr("dy", fontSizeValue / 1.2)
             .attr("text-anchor", "middle")
             .style("font-size", fontSizeLabel + "px");
+    }
+
+    public getFormattingModel(): powerbi.visuals.FormattingModel {
+        return this.formattingSettingsService.buildFormattingModel(this.visualSettings);
     }
 }
