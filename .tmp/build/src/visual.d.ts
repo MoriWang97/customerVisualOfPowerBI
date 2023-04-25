@@ -10,6 +10,9 @@ export declare class Visual implements IVisual {
     private circle;
     private textValue;
     private textLabel;
+    private visualSettings;
+    private formattingSettingsService;
     constructor(options: VisualConstructorOptions);
     update(options: VisualUpdateOptions): void;
+    getFormattingModel(): powerbi.visuals.FormattingModel;
 }
