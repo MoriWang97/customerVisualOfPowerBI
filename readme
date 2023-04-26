@@ -1,5 +1,9 @@
-# create project
-pbiviz new CircleCard
+# preset
+1. install node.js
+2. npm i -g powerbi-visuals-tools@latest
+
+# install dependencies
+npm install
 
 # run
 pbiviz start
