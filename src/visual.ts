@@ -35,10 +35,13 @@ import IVisualHost = powerbi.extensibility.IVisualHost;
 import * as d3 from "d3";
 import { VisualSettings } from "./settings";
 import { FormattingSettingsService } from "powerbi-visuals-utils-formattingmodel";
+import {createTooltipServiceWrapper, ITooltipServiceWrapper} from "powerbi-visuals-utils-tooltiputils";
+import VisualTooltipDataItem = powerbi.extensibility.VisualTooltipDataItem;
 type Selection<T extends d3.BaseType> = d3.Selection<T, any, any, any>;
 
 export class Visual implements IVisual {
     private host: IVisualHost;
+    private element: HTMLElement;
     private svg: Selection<SVGElement>;
     private container: Selection<SVGElement>;
     private circle: Selection<SVGElement>;
@@ -46,8 +49,13 @@ export class Visual implements IVisual {
     private textLabel: Selection<SVGElement>;
     private visualSettings: VisualSettings;
     private formattingSettingsService: FormattingSettingsService;
+    private tooltipServiceWrapper: ITooltipServiceWrapper;
+    private barSelection: d3.Selection<d3.BaseType, any, d3.BaseType, any>;
+    private barContainer: Selection<SVGElement>;
     
     constructor(options: VisualConstructorOptions) {
+        this.host = options.host;
+        this.element = options.element;
         this.svg = d3.select(options.element)
             .append('svg')
             .classed('circleCard', true);
@@ -60,6 +68,10 @@ export class Visual implements IVisual {
         this.textLabel = this.container.append("text")
             .classed("textLabel", true);
         this.formattingSettingsService = new FormattingSettingsService();
+        this.tooltipServiceWrapper = createTooltipServiceWrapper(this.host.tooltipService, options.element);
+        this.barContainer = this.svg
+            .append('g')
+            .classed('barContainer', true);
     }
     
     public update(options: VisualUpdateOptions) {
@@ -96,9 +108,50 @@ export class Visual implements IVisual {
             .attr("dy", fontSizeValue / 1.2)
             .attr("text-anchor", "middle")
             .style("font-size", fontSizeLabel + "px");
+
+        const barSelectionMerged = this.barSelection
+            .enter()
+            .append('rect')
+            .merge(<any>this.barSelection);
+        this.tooltipServiceWrapper.addTooltip(barSelectionMerged,
+            this.getTooltipData,
+            (datapoint: DataView) => datapoint.metadata.columns[0].queryName
+        );
+
+        // barSelectionMerged.on("mouseover.tooltip", () => {
+        //     // Ignore mouseover while handling touch events
+        //     if (!this.canDisplayTooltip(d3.event))
+        //         return;
+
+        //     let tooltipEventArgs = this.makeTooltipEventArgs<T>(rootNode, true, false);
+        //     if (!tooltipEventArgs)
+        //         return;
+
+        //     let tooltipInfo = getTooltipInfoDelegate(tooltipEventArgs);
+        //     if (tooltipInfo == null)
+        //         return;
+
+        //     let selectionId = getDataPointIdentity(tooltipEventArgs);
+
+        //     this.visualHostTooltipService.show({
+        //         coordinates: tooltipEventArgs.coordinates,
+        //         isTouchEvent: false,
+        //         dataItems: tooltipInfo,
+        //         identities: selectionId ? [selectionId] : [],
+        //     });
+        // });
     }
 
     public getFormattingModel(): powerbi.visuals.FormattingModel {
         return this.formattingSettingsService.buildFormattingModel(this.visualSettings);
+    }
+
+    private getTooltipData(): VisualTooltipDataItem[] {
+        return [{
+            displayName: "123",
+            value: "123",
+            color: "red",
+            header: 'ToolTip Title'
+        }];
     }
 }
